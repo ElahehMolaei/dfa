@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <iterator>
 #define DEBUG 1
-
+//inja header include krdim
 using namespace std;
 
 string join(vector<int> v, string delim) {
