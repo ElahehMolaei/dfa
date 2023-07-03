@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <string.h>
 #define DEBUG 1
 
 using namespace std;
@@ -18,7 +19,9 @@ string join(vector<int> v, string delim) {
             ss << ",";
         ss << v[i];
     }
-    return ss.str();
+    if (v.size())
+        return ss.str();
+    return "";
 }
 
 struct trans {
@@ -32,6 +35,7 @@ class NFA {
     public:
         vector<int> vertex;
         vector<trans> transitions;
+        vector<char> symbol;
         int final_state;
 
         NFA() {
@@ -71,7 +75,11 @@ class NFA {
                 new_trans = transitions.at(i);
                 cout<<"q"<<new_trans.vertex_from<<" -> q"<<new_trans.vertex_to<<" : Symbol - "<<new_trans.trans_symbol<<endl;
             }
-            cout<<"\nThe final state is q"<<get_final_state()<<endl;
+            if (get_final_state()>=0) {
+                cout<<"\nThe final state is q : "<<get_final_state()<<endl;
+            } else {
+                cout<<"\nnfa does not have a final state!"<<endl;
+            }
         }
 
         /**
@@ -154,7 +162,6 @@ class NFA {
         }
 
 };
-
 
 NFA concat(NFA a, NFA b) {
     NFA result;
@@ -244,16 +251,27 @@ NFA re_to_nfa(string re) {
     int op_count;
     char cur_sym;
     NFA *new_sym;
+    vector<char> sym;
+    bool let;
 
     for(string::iterator it = re.begin(); it != re.end(); ++it) {
+        let=false;
         cur_sym = *it;
-        if(cur_sym != '(' && cur_sym != ')' && cur_sym != '*' && cur_sym != '|' && cur_sym != '.') {
+        if(cur_sym != '(' && cur_sym != ')' && cur_sym != '*' && cur_sym != '+' && cur_sym != '.') {
             new_sym = new NFA();
             new_sym->set_vertex(2);
             new_sym->set_transition(0, 1, cur_sym);
             new_sym->set_final_state(1);
             operands.push(*new_sym);
             delete new_sym;
+            for (int i=0 ; i<sym.size() ; i++) {
+                if (sym.at(i)==cur_sym) {
+                    let=true; break;
+                }
+            }
+            if (let==0) {
+                sym.push_back(cur_sym);
+            }
         } else {
             if(cur_sym == '*') {
                 NFA star_sym = operands.top();
@@ -261,7 +279,7 @@ NFA re_to_nfa(string re) {
                 operands.push(kleene(star_sym));
             } else if(cur_sym == '.') {
                 operators.push(cur_sym);
-            } else if(cur_sym == '|') {
+            } else if(cur_sym == '+') {
                 operators.push(cur_sym);
             } else if(cur_sym == '(') {
                 operators.push(cur_sym);
@@ -286,7 +304,7 @@ NFA re_to_nfa(string re) {
                         operands.pop();
                         operands.push(concat(op1, op2));
                     }
-                } else if(op_sym == '|'){
+                } else if(op_sym == '+'){
                     selections.assign(op_count + 1, NFA());
                     int tracker = op_count;
                     for(int i = 0; i < op_count + 1; i++) {
@@ -302,7 +320,10 @@ NFA re_to_nfa(string re) {
         }
     }
 
-    return operands.top();
+    NFA nfa=operands.top();
+    nfa.symbol=sym;
+
+    return nfa;
 }
 
 
@@ -313,6 +334,7 @@ class DFA {
         vector<vector<int> > entries;
         vector<bool>         marked;
         vector<int>          final_states;
+        //vector<char>         symbol;
 
         /**
          * Add newly_created entry into DFA
@@ -321,6 +343,10 @@ class DFA {
             entries.push_back(entry);
             marked.push_back(false);
             return entries.size() - 1;
+        }
+
+        int get_entries_count() {
+            return entries.size();
         }
 
         /**
@@ -359,17 +385,18 @@ class DFA {
         }
 
         void set_final_state(int nfa_fs) {
-            for (int i = 0; i < entries.size(); i++) {
-                vector<int> entry = entries.at(i);
+            if (nfa_fs) {
+                for (int i = 0; i < entries.size(); i++) {
+                    vector<int> entry = entries.at(i);
 
-                for (int j = 0; j < entry.size(); j++) {
-                    int vertex = entry.at(j);
-                    if (vertex == nfa_fs) {
-                        final_states.push_back(i);
+                    for (int j = 0; j < entry.size(); j++) {
+                        int vertex = entry.at(j);
+                        if (vertex == nfa_fs) {
+                            final_states.push_back(i);
+                        }
                     }
                 }
             }
-
         }
 
         string get_final_state() {
@@ -384,7 +411,6 @@ class DFA {
             transitions.push_back(new_trans);
         }
 
-
         void display() {
             trans new_trans;
             cout<<"\n";
@@ -394,11 +420,200 @@ class DFA {
                     <<"} -> q"<<new_trans.vertex_to<<" {"<<join(entries.at(new_trans.vertex_to), ",")
                     <<"} : Symbol - "<<new_trans.trans_symbol<<endl;
             }
-            cout<<"\nThe final state is q : "<<join(final_states, ",")<<endl;
+            if (!final_states.empty()) {
+                cout<<"\nThe final state is q : "<<join(final_states, ",")<<endl;
+            } else {
+                cout<<"\ndfa does not have a final state!"<<endl;
+            }
+        }
+
+        void display_m() {
+            trans new_trans;
+            cout<<"\n";
+            for(int i = 0; i < transitions.size(); i++) {
+                new_trans = transitions.at(i);
+                cout<<"q"<<new_trans.vertex_from << " -> q"<<new_trans.vertex_to << " : Symbol - "<<new_trans.trans_symbol<<endl;
+            }
+            if (!final_states.empty()) {
+                cout<<"\nThe final state is q : "<<join(final_states, ",")<<endl;
+            } else {
+                cout<<"\ndfa does not have a final state!"<<endl;
+            }
         }
 };
 
-bool are_equal( DFA& dfa1,  DFA& dfa2) {
+/*DFA nfa_to_dfa(NFA nfa) {
+    DFA dfa;
+
+    const vector<int> start(1, 0);
+    const vector<int> s0 = nfa.eclosure(start);
+    vector<int> fs;
+
+    int vertex_from = dfa.add_entry(s0);
+
+    while (vertex_from != -1) {
+        const vector<int> T = dfa.entry_at(vertex_from);
+        dfa.mark_entry(vertex_from);
+
+        const vector<char> symbols = nfa.find_possible_input_symbols(T);
+        for (int i = 0; i < symbols.size(); i++) {
+            char a = symbols.at(i);
+
+            //TODO: add a eclosure cache : { state => eclosure }
+            vector<int> U = nfa.eclosure(nfa.move(T, a));
+
+            int vertex_to = dfa.find_entry(U);
+            /*if (vertex_to == -1) { // U not already in S'
+                if (nfa.final_state==-1) {
+                    for (int j=0 ; j<U.size() ; j++) {
+                        int u=U.at(j);
+                        fs.push_back(u);
+                    }
+                }
+                for (int j=0 ; j<U.size() ; j++) {
+                    int u=U.at(j);
+                    cout << "u " << u << endl;
+                }
+                vertex_to = dfa.add_entry(U);
+            }
+
+            dfa.set_transition(vertex_from, vertex_to, a);
+            //cout << "t " << U << endl;
+        }
+
+        vertex_from = dfa.next_unmarked_entry_idx();
+    }
+
+    // The finish states of the DFA are those which contain any
+    // of the finish states of the NFA.
+    if (nfa.final_state==-1) {
+        dfa.final_states=fs;
+    }else {
+        dfa.set_final_state(nfa.get_final_state());
+    }
+
+    return dfa;
+}*/
+
+DFA nfa_to_dfa(NFA nfa) {
+    DFA dfa;
+
+    const vector<int> start(1, 0);
+    const vector<int> s0 = nfa.eclosure(start);
+
+    int vertex_from = dfa.add_entry(s0);
+
+    while (vertex_from != -1) {
+        const vector<int> T = dfa.entry_at(vertex_from);
+        dfa.mark_entry(vertex_from);
+
+        const vector<char> symbols = nfa.find_possible_input_symbols(T);
+        for (int i = 0; i < symbols.size(); i++) {
+            char a = symbols.at(i);
+
+            //TODO: add a eclosure cache : { state => eclosure }
+            const vector<int> U = nfa.eclosure(nfa.move(T, a));
+
+            int vertex_to = dfa.find_entry(U);
+            if (vertex_to == -1) { // U not already in S'
+                vertex_to = dfa.add_entry(U);
+            }
+
+            dfa.set_transition(vertex_from, vertex_to, a);
+        }
+
+        vertex_from = dfa.next_unmarked_entry_idx();
+    }
+
+    // The finish states of the DFA are those which contain any
+    // of the finish states of the NFA.
+    dfa.set_final_state(nfa.get_final_state());
+
+    return dfa;
+}
+
+NFA contrary (DFA a) {
+    int i;
+    NFA result;
+
+    bool arr[a.get_entries_count()];
+    for (i=0 ; i<a.get_entries_count() ; i++) {
+        arr[i]=0;
+    }
+
+    int final;
+    for (i=0 ; i<a.final_states.size() ; i++) {
+        final=a.final_states.at(i);
+        arr[final]=1;
+    }
+
+    result.set_vertex(a.get_entries_count()+1);
+    trans new_trans;
+
+    for(i = 0; i < a.transitions.size(); i++) {
+        new_trans = a.transitions.at(i);
+        result.set_transition(new_trans.vertex_from, new_trans.vertex_to, new_trans.trans_symbol);
+    }
+
+    for (i=0 ; i<a.get_entries_count() ; i++) {
+        if (!arr[i]) {
+            result.set_transition(i, a.get_entries_count() + 1, '^');
+            //cout << "i " << i << endl;
+        }
+    }
+    result.set_final_state(a.get_entries_count()+1);
+
+    return result;
+}
+
+NFA Union(DFA a, DFA b) {
+    NFA result;
+    result.set_vertex(a.get_entries_count() + b.get_entries_count() +2);
+
+    int i;
+    trans new_trans;
+
+    result.set_transition(0, 1, '^');
+    result.set_transition(0, a.get_entries_count()+1, '^');
+    for(i = 0; i < a.transitions.size(); i++) {
+        new_trans = a.transitions.at(i);
+        result.set_transition(new_trans.vertex_from+1, new_trans.vertex_to+1, new_trans.trans_symbol);
+        //cout << "nn " << new_trans.vertex_from+1 << " " << new_trans.vertex_to+1 << endl;
+    }
+
+    int final;
+    for (i=0 ; i<a.final_states.size() ; i++) {
+        final = a.final_states.at(i);
+        result.set_transition(final +1, a.get_entries_count() + b.get_entries_count()+1, '^');
+    }
+
+    //result.set_transition(a.get_final_state(), a.get_entries_count() + b.get_entries_count()+1, '^');
+
+    for(i = 0; i < b.transitions.size(); i++) {
+        new_trans = b.transitions.at(i);
+        result.set_transition(new_trans.vertex_from + a.get_entries_count()+1, new_trans.vertex_to + a.get_entries_count()+1, new_trans.trans_symbol);
+    }
+
+    for (i=0 ; i<b.final_states.size() ; i++) {
+        final = b.final_states.at(i);
+        result.set_transition(final + a.get_entries_count() +1, a.get_entries_count() + b.get_entries_count()+1, '^');
+    }
+
+    //result.set_transition(b.get_final_state(), a.get_entries_count() + b.get_entries_count() +1, '^');
+
+
+    result.set_final_state(a.get_entries_count() + b.get_entries_count() +1);
+
+    return result;
+}
+
+bool is_true(DFA a) {
+    if (a.get_entries_count()==a.final_states.size())
+        return true;
+    return false;
+}
+
+/*bool are_equal( DFA& dfa1,  DFA& dfa2) {
     // Check if the number of entries, transitions, and final states are equal
     if (dfa1.entries.size() != dfa2.entries.size() ||
         dfa1.transitions.size() != dfa2.transitions.size() ||
@@ -427,9 +642,9 @@ bool are_equal( DFA& dfa1,  DFA& dfa2) {
 
     // The two DFAs are equal
     return true;
-}
+}*/
 
-void minimize(DFA& dfa) {
+DFA minimize(DFA& dfa) {
     // Initialize the partition to two sets: final states and non-final states
     vector<vector<int> > partition(2);
     for (int i = 0; i < dfa.entries.size(); i++) {
@@ -505,42 +720,46 @@ void minimize(DFA& dfa) {
 
     // Update the original DFA to be the minimized DFA
     dfa = new_dfa;
+    return dfa;
 }
-DFA nfa_to_dfa(NFA nfa) {
-    DFA dfa;
 
-    const vector<int> start(1, 0);
-    const vector<int> s0 = nfa.eclosure(start);
 
-    int vertex_from = dfa.add_entry(s0);
 
-    while (vertex_from != -1) {
-        const vector<int> T = dfa.entry_at(vertex_from);
-        dfa.mark_entry(vertex_from);
 
-        const vector<char> symbols = nfa.find_possible_input_symbols(T);
-        for (int i = 0; i < symbols.size(); i++) {
-            char a = symbols.at(i);
+int size_order(string reg) {
+    int i, j, Size= reg.length();
 
-            //TODO: add a eclosure cache : { state => eclosure }
-            const vector<int> U = nfa.eclosure(nfa.move(T, a));
-
-            int vertex_to = dfa.find_entry(U);
-            if (vertex_to == -1) { // U not already in S'
-                vertex_to = dfa.add_entry(U);
+    for (i=1 ; i<reg.length()-1 ; i++) {
+        if (i<reg.length()-2 && (reg[i+1]>= 'a' && reg[i+1]<= 'z') || (reg[i+1]>= 'A' && reg[i+1]<= 'Z') || (reg[i+1]>= '0' && reg[i+1]<= '9')) {
+            if ((reg[i]>= 'a' && reg[i]<= 'z') || (reg[i]>= 'A' && reg[i]<= 'Z') || (reg[i]>= '0' && reg[i]<= '9') || reg[i]== '*' || reg[i]== ')') {
+                Size++;
             }
-
-            dfa.set_transition(vertex_from, vertex_to, a);
         }
 
-        vertex_from = dfa.next_unmarked_entry_idx();
     }
 
-    // The finish states of the DFA are those which contain any
-    // of the finish states of the NFA.
-    dfa.set_final_state(nfa.get_final_state());
+    return Size;
+}
 
-    return dfa;
+string order(string reg, int Size) {
+    int i, j;
+    char regex[Size];
+    for (i=0 , j=0; i<reg.length() ; i++, j++) {
+
+        regex[j]=reg[i];
+
+        if (i<reg.length()-2 && (reg[i+1]>= 'a' && reg[i+1]<= 'z') || (reg[i+1]>= 'A' && reg[i+1]<= 'Z') || (reg[i+1]>= '0' && reg[i+1]<= '9')) {
+            if ((reg[i]>= 'a' && reg[i]<= 'z') || (reg[i]>= 'A' && reg[i]<= 'Z') || (reg[i]>= '0' && reg[i]<= '9') || reg[i]== '*' || reg[i]== ')') {
+                j++;
+                regex[j]='.';
+            }
+        } else if (i<reg.length()-2 && reg[i+1]>= '(' && (reg[i]== '*' || reg[i]== ')')) {
+            j++;
+            regex[j]='.';
+        }
+    }
+
+    return regex;
 }
 
 
@@ -562,11 +781,15 @@ int main() {
     cout<<"\n\nEnter the regular expressions in the above mentioned format - \n\n";
     string reg1,reg2;
     set<char> symbols;
+
     	cout<<endl<<"enter the regex: ";
 		cin>>reg1;
+		reg1= "(" + reg1 + ")";
+
 		cout<<endl<<"enter the regex: ";
 		cin>>reg2;
-	
+		reg2= "(" + reg2 + ")";
+
     NFA nfa1;
     DFA dfa1;
     NFA nfa2;
@@ -578,6 +801,9 @@ int main() {
     cout<<"\n==> DFA1 : \n";
     dfa1 = nfa_to_dfa(nfa1);
     dfa1.display();
+    //cout<<"\n==> minimize DFA1 : \n";
+    //dfa1= minimize(dfa1);
+    //dfa1.display_m();
 	cout<<"-------------------------------------------------------------------------------------------------";
     cout<<endl<<"NFA2 :"<<endl;
     nfa2 = re_to_nfa(reg2);
@@ -585,18 +811,53 @@ int main() {
     cout<<"\n==> DFA2 : \n";
     dfa2 = nfa_to_dfa(nfa2);
     dfa2.display();
-	
-	minimize(dfa1);
-	minimize(dfa2);
-	cout<<endl;
-	if (are_equal(dfa1, dfa2)) {
-        cout << "The two DFAs are equal." << endl;
+    //cout<<"\n==> minimize DFA2 : \n";
+    //dfa2= minimize(dfa2);
+    //dfa2.display_m();
+
+    /*cout<<"-------------------------------------------------------------------------------------------------";
+    cout<<endl<<"NFA3 :"<<endl;
+    NFA nfa3=Union(dfa1, nfa_to_dfa(contrary(dfa2)));
+    nfa3.display();
+    cout<<endl<<"DFA3 :"<<endl;
+    DFA dfa3=nfa_to_dfa(nfa3);
+    dfa3.display();
+
+    cout<<"-------------------------------------------------------------------------------------------------";
+    cout<<endl<<"NFA3 :"<<endl;
+    NFA nfa4=Union(nfa_to_dfa(contrary(dfa1)), dfa2);
+    nfa4.display();
+    cout<<endl<<"DFA3 :"<<endl;
+    DFA dfa4=nfa_to_dfa(nfa4);
+    dfa4.display();
+
+    /*NFA nfa3=Union(dfa1, dfa2);
+    nfa3.display();
+    cout<<"\n==> DFA3 : \n";
+    DFA dfa = nfa_to_dfa(nfa3);
+    dfa.display_m();*/
+
+
+
+	/*if (is_true(dfa3) && is_true(dfa4)) {
+        cout << "\n\nThe two Regular expression are equal." << endl;
     } else {
-        cout << "The two DFAs are not equal." << endl;
+        cout << "\n\nThe two Regular expressions are not equal." << endl;
     }
-    return 0;
+    return 0;*/
 }
 
 /*(b*.(a.b.b*)*.(a|^))
 ((b|(a.b))*.(a|^))
 (b*|(((b|(a.b))*.a).b*))*/
+
+/*
+(a+b)*
+(a*.b*)*
+*/
+
+/*
+b*.(a.b.b*)*.(a+^)
+(b+(a.b))*.(a+^)
+b*+(((b+(a.b))*.a).b*)
+*/
