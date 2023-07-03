@@ -6,8 +6,9 @@
 #include<stack>
 #include <algorithm>
 #include <iterator>
+#include <map>
 #define DEBUG 1
-//inja header include krdim
+
 using namespace std;
 
 string join(vector<int> v, string delim) {
@@ -397,7 +398,114 @@ class DFA {
         }
 };
 
+bool are_equal( DFA& dfa1,  DFA& dfa2) {
+    // Check if the number of entries, transitions, and final states are equal
+    if (dfa1.entries.size() != dfa2.entries.size() ||
+        dfa1.transitions.size() != dfa2.transitions.size() ||
+        dfa1.final_states.size() != dfa2.final_states.size()) {
+        return false;
+    }
 
+    // Check if the entries, transitions, and final states are equal
+    for (int i = 0; i < dfa1.entries.size(); i++) {
+        if (dfa1.entry_at(i) != dfa2.entry_at(i)) {
+            return false;
+        }
+    }
+    for (int i = 0; i < dfa1.transitions.size(); i++) {
+        if (dfa1.transitions.at(i).vertex_from != dfa2.transitions.at(i).vertex_from ||
+            dfa1.transitions.at(i).vertex_to != dfa2.transitions.at(i).vertex_to ||
+            dfa1.transitions.at(i).trans_symbol != dfa2.transitions.at(i).trans_symbol) {
+            return false;
+        }
+    }
+    for (int i = 0; i < dfa1.final_states.size(); i++) {
+        if (dfa1.final_states.at(i) != dfa2.final_states.at(i)) {
+            return false;
+        }
+    }
+
+    // The two DFAs are equal
+    return true;
+}
+
+void minimize(DFA& dfa) {
+    // Initialize the partition to two sets: final states and non-final states
+    vector<vector<int> > partition(2);
+    for (int i = 0; i < dfa.entries.size(); i++) {
+        if (find(dfa.final_states.begin(), dfa.final_states.end(), i) != dfa.final_states.end()) {
+            partition[0].push_back(i);
+        } else {
+            partition[1].push_back(i);
+        }
+    }
+
+    // Keep partitioning until it doesn't change anymore
+    bool changed = true;
+    while (changed) {
+        changed = false;
+
+        // Partition each block in the current partition
+        vector<vector<int> > new_partition;
+        for (int i = 0; i < partition.size(); i++) {
+            vector<int> block = partition[i];
+
+            // Partition the block based on the transitions
+            map<vector<int>, vector<int> > block_partitions;
+            for (int j = 0; j < block.size(); j++) {
+                int entry = block[j];
+                vector<int> transitions_to;
+                for (int k = 0; k < dfa.transitions.size(); k++) {
+                    if (dfa.transitions[k].vertex_from == entry) {
+                        transitions_to.push_back(dfa.transitions[k].vertex_to);
+                    }
+                }
+                block_partitions[transitions_to].push_back(entry);
+            }
+
+            // Add the sub-blocks to the new partition
+            for (auto p : block_partitions) {
+                new_partition.push_back(p.second);
+            }
+
+            // Check if the partition has changed
+            if (block_partitions.size() > 1) {
+                changed = true;
+            }
+        }
+
+        // Update the partition
+        partition = new_partition;
+    }
+
+    // Create a new DFA based on the minimized partition
+    DFA new_dfa;
+    for (int i = 0; i < partition.size(); i++) {
+        vector<int> entry = partition[i];
+        new_dfa.add_entry(entry);
+
+        // Check if the entry contains a final state
+        bool contains_final_state = false;
+        for (int j = 0; j < entry.size(); j++) {
+            if (find(dfa.final_states.begin(), dfa.final_states.end(), entry[j]) != dfa.final_states.end()) {
+                contains_final_state = true;
+                break;
+            }
+        }
+        if (contains_final_state) {
+            new_dfa.final_states.push_back(i);
+        }
+    }
+    for (int i = 0; i < dfa.transitions.size(); i++) {
+        trans t = dfa.transitions[i];
+        int new_vertex_from = new_dfa.find_entry(dfa.entry_at(t.vertex_from));
+        int new_vertex_to = new_dfa.find_entry(dfa.entry_at(t.vertex_to));
+        new_dfa.set_transition(new_vertex_from, new_vertex_to, t.trans_symbol);
+    }
+
+    // Update the original DFA to be the minimized DFA
+    dfa = new_dfa;
+}
 DFA nfa_to_dfa(NFA nfa) {
     DFA dfa;
 
@@ -440,49 +548,6 @@ DFA nfa_to_dfa(NFA nfa) {
 
 
 int main() {
-    cout<<"\n\nThe Thompson's Construction Algorithm takes a regular expression as an input "
-        <<"and returns its corresponding Non-Deterministic Finite Automaton \n\n";
-    cout<<"\n\nThe basic building blocks for constructing the NFA are : \n";
-
-    NFA a, b;
-
-    cout<<"\nFor the regular expression segment : (a)";
-    a.set_vertex(2);
-    a.set_transition(0, 1, 'a');
-    a.set_final_state(1);
-    a.display();
-    //	getch();
-
-    cout<<"\nFor the regular expression segment : (b)";
-    b.set_vertex(2);
-    b.set_transition(0, 1, 'b');
-    b.set_final_state(1);
-    b.display();
-    //	getch();
-
-    cout<<"\nFor the regular expression segment [Concatenation] : (a.b)";
-    NFA ab = concat(a, b);
-    ab.display();
-    //	getch();
-
-    cout<<"\nFor the regular expression segment [Kleene Closure] : (a*)";
-    NFA a_star = kleene(a);
-    a_star.display();
-    //	getch();
-
-    cout<<"\nFor the regular expression segment [Or] : (a|b)";
-    int no_of_selections;
-    no_of_selections = 2;
-    vector<NFA> selections(no_of_selections, NFA());
-    selections.at(0) = a;
-    selections.at(1) = b;
-    NFA a_or_b = or_selection(selections, no_of_selections);
-    a_or_b.display();
-    //	getch();
-
-
-    string re;
-    set<char> symbols;
 
     cout<<"\n*****\t*****\t*****\n";
     cout<<"\nFORMAT : \n"
@@ -490,34 +555,48 @@ int main() {
         <<"> Enclose every concatenation and or section by parantheses \n"
         <<"> Enclose the entire regular expression with parantheses \n\n";
 
-    cout<<"For example : \nFor the regular expression (a.(b|c))  -- \n";
+    /*cout<<"For example : \nFor the regular expression (a.(b|c))  -- \n";
     NFA example_nfa = re_to_nfa("(a.(b|c))");
     example_nfa.display();
-
-    cout<<"\n\nEnter the regular expression in the above mentioned format - \n\n";
-    cin>>re;
-
-    /*	char cur_sym;
-        int counter = 0;
-        for(string::iterator it = re.begin(); it != re.end(); ++it) {
-        cur_sym = (*it);
-        if(cur_sym != '(' && cur_sym != ')' && cur_sym != '*' && cur_sym != '|' && cur_sym != '.') {
-        cout<<cur_sym<<" "<<counter++<<endl;
-        symbols.insert(cur_sym);
-        }
-        }
-        */
-
-    cout<<"\n\nThe required NFA has the transitions : \n\n";
-
-    NFA required_nfa;
-    required_nfa = re_to_nfa(re);
-    required_nfa.display();
-
-    cout<<"\n\n==> DFA : \n\n";
-
-    DFA required_dfa = nfa_to_dfa(required_nfa);
-    required_dfa.display();
-
+*/
+    cout<<"\n\nEnter the regular expressions in the above mentioned format - \n\n";
+    string reg1,reg2;
+    set<char> symbols;
+    	cout<<endl<<"enter the regex: ";
+		cin>>reg1;
+		cout<<endl<<"enter the regex: ";
+		cin>>reg2;
+	
+    NFA nfa1;
+    DFA dfa1;
+    NFA nfa2;
+    DFA dfa2;
+    cout<<"-------------------------------------------------------------------------------------------------";
+	cout<<endl<<"NFA1 :"<<endl;
+    nfa1 = re_to_nfa(reg1);
+    nfa1.display();
+    cout<<"\n==> DFA1 : \n";
+    dfa1 = nfa_to_dfa(nfa1);
+    dfa1.display();
+	cout<<"-------------------------------------------------------------------------------------------------";
+    cout<<endl<<"NFA2 :"<<endl;
+    nfa2 = re_to_nfa(reg2);
+    nfa2.display();
+    cout<<"\n==> DFA2 : \n";
+    dfa2 = nfa_to_dfa(nfa2);
+    dfa2.display();
+	
+	minimize(dfa1);
+	minimize(dfa2);
+	cout<<endl;
+	if (are_equal(dfa1, dfa2)) {
+        cout << "The two DFAs are equal." << endl;
+    } else {
+        cout << "The two DFAs are not equal." << endl;
+    }
     return 0;
 }
+
+/*(b*.(a.b.b*)*.(a|^))
+((b|(a.b))*.(a|^))
+(b*|(((b|(a.b))*.a).b*))*/
