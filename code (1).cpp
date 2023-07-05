@@ -295,13 +295,15 @@ NFA re_to_nfa(string re) {
             new_sym->set_final_state(1);
             operands.push(*new_sym);
             delete new_sym;
-            for (int i=0 ; i<sym.size() ; i++) {
-                if (sym.at(i)==cur_sym) {
-                    let=true; break;
+            if (cur_sym!='^') {
+                for (int i=0 ; i<sym.size() ; i++) {
+                    if (sym.at(i)==cur_sym) {
+                        let=true; break;
+                    }
                 }
-            }
-            if (let==0) {
-                sym.push_back(cur_sym);
+                if (let==0) {
+                    sym.push_back(cur_sym);
+                }
             }
         } else {
             if(cur_sym == '*') {
@@ -613,13 +615,53 @@ DFA nfa_to_dfa(NFA nfa) {
     }
 
     dfa.delete_trantransitions();
-/*    if (dfa.transitions.size()== symbols.size()) {
+    if (dfa.transitions.size()!= nfa.symbol.size()*dfa.get_entries_count()) {
+        cout << "y" << dfa.transitions.size() << " " << nfa.symbol.size()<< " " << dfa.get_entries_count() << endl;
+        vector <int> halt;
+        dfa.add_entry(halt);
+        int number, k=0, i, j, l;
+        char c;
+        trans tran;
+        vector<char> sy;
+        for (i=0 ; i<dfa.entries.size()-1 ; i++) {
+            number=0;
+            for (j=0 ; j<nfa.symbol.size() ; j++, k++) {
+                cout << "num " << number << " " << k << " " << endl;//dfa.transitions.at(k).vertex_from << endl;
+                if (dfa.transitions.size()>k && dfa.transitions.at(k).vertex_from==i)
+                    number++;
+                else
+                    break;
+            }
 
+            //cout << "num2 " << number << " " << k << " " << dfa.transitions.at(k).vertex_from << endl;
+            if (number!=nfa.symbol.size()) {
+                    cout << "s" << endl;
+                sy=nfa.symbol;
+                for (j=0 ; j<number ; j++) {
+                    c=dfa.transitions.at(k-number+j).trans_symbol;
+                    cout << "kj " << k-number+j << " " << c << endl;
+                    for (l=0 ; l<sy.size() ; l++) {
+                        if (c==sy.at(l)) {
+                            cout << "l " << sy.at(l) << " " << l << endl;
+                            sy.erase(sy.begin()+l);
+                        }
+                    }
+                }
 
-        for (int i=0 ; i<dfa.transitions.size() ; i++) {
+                for (j=0 ; j<sy.size() ; j++, k++) {
+                    tran.trans_symbol= sy.at(j); tran.vertex_from= i; tran.vertex_to=dfa.entries.size()-1;
+                    dfa.transitions.insert(dfa.transitions.begin() +k, tran);
+                    cout << "c " << dfa.transitions.at(k).vertex_from << " " << dfa.transitions.at(k).vertex_to << " " << dfa.transitions.at(k).trans_symbol << endl;
+                }
+            }
+            cout << "i " << i << endl;
+        }
+        for (i=0 ; i<nfa.symbol.size() ; i++) {
+            cout << "vv " << dfa.entries.size()-1 << " " << nfa.symbol.at(i) << endl;
+            dfa.set_transition(dfa.entries.size()-1, dfa.entries.size()-1, nfa.symbol.at(i));
         }
 
-    }*/
+    }
     // The finish states of the DFA are those which contain any
     // of the finish states of the NFA.
     dfa.set_final_state(nfa.get_final_state());
@@ -656,11 +698,11 @@ NFA contrary (DFA a) {
 
         for (i=0 ; i<a.get_entries_count() ; i++) {
             if (!arr[i]) {
-                result.set_transition(i, a.get_entries_count() + 1, '^');
+                result.set_transition(i, a.get_entries_count(), '^');
                 //cout << "i " << i << endl;
             }
         }
-        result.set_final_state(a.get_entries_count()+1);
+        result.set_final_state(a.get_entries_count());
 
     } else {
 
@@ -692,6 +734,7 @@ NFA Union(DFA a, DFA b) {
             final = b.final_states.at(i);
             result.set_transition(final, b.get_entries_count()+1, '^');
         }
+        result.set_final_state(b.get_entries_count());
         result.symbol=b.symbol;
         return result;
     }
@@ -703,6 +746,7 @@ NFA Union(DFA a, DFA b) {
             final = a.final_states.at(i);
             result.set_transition(final, a.get_entries_count()+1, '^');
         }
+        result.set_final_state(a.get_entries_count());
         result.symbol=a.symbol;
         return result;
     }
@@ -960,7 +1004,7 @@ int main() {
     contrary(dfa1).display();
     cout << "\n\n2" <<endl;
     contrary(dfa2).display();
-    /*cout<<"-------------------------------------------------------------------------------------------------";
+    cout<<"-------------------------------------------------------------------------------------------------";
     cout<<endl<<"NFA3 :"<<endl;
     NFA nfa3=Union(dfa1, nfa_to_dfa(contrary(dfa2)));
     nfa3.display();
@@ -969,10 +1013,10 @@ int main() {
     dfa3.display();
 
     cout<<"-------------------------------------------------------------------------------------------------";
-    cout<<endl<<"NFA3 :"<<endl;
+    cout<<endl<<"NFA4 :"<<endl;
     NFA nfa4=Union(nfa_to_dfa(contrary(dfa1)), dfa2);
     nfa4.display();
-    cout<<endl<<"DFA3 :"<<endl;
+    cout<<endl<<"DFA4 :"<<endl;
     DFA dfa4=nfa_to_dfa(nfa4);
     dfa4.display();
 
@@ -984,12 +1028,12 @@ int main() {
 
 
 
-	/*if (is_true(dfa3) && is_true(dfa4)) {
+	if (is_true(dfa3) && is_true(dfa4)) {
         cout << "\n\nThe two Regular expression are equal." << endl;
     } else {
         cout << "\n\nThe two Regular expressions are not equal." << endl;
     }
-    return 0;*/
+    return 0;
 }
 
 /*(b*.(a.b.b*)*.(a|^))
@@ -1005,4 +1049,9 @@ int main() {
 b*.(a.b.b*)*.(a+^)
 (b+(a.b))*.(a+^)
 b*+(((b+(a.b))*.a).b*)
+
+
+
+
+(a+b)*.(a+b)*
 */
