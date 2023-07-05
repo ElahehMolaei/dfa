@@ -367,6 +367,7 @@ class DFA {
         vector<vector<int> > entries;
         vector<bool>         marked;
         vector<int>          final_states;
+        vector<char>         symbol;
         //vector<char>         symbol;
 
         /**
@@ -622,6 +623,7 @@ DFA nfa_to_dfa(NFA nfa) {
     // The finish states of the DFA are those which contain any
     // of the finish states of the NFA.
     dfa.set_final_state(nfa.get_final_state());
+    dfa.symbol=nfa.symbol;
 
     return dfa;
 }
@@ -673,14 +675,42 @@ NFA contrary (DFA a) {
         result.set_final_state(-1);
     }
 
+    result.symbol=a.symbol;
+
     return result;
 }
 
 NFA Union(DFA a, DFA b) {
     NFA result;
+    int final;
+    int i;
+
+    if (a.final_states.empty()) {
+        result.set_vertex(b.get_entries_count()+1);
+        result.transitions=b.transitions;
+        for (i=0 ; i<b.final_states.size() ; i++) {
+            final = b.final_states.at(i);
+            result.set_transition(final, b.get_entries_count()+1, '^');
+        }
+        result.symbol=b.symbol;
+        return result;
+    }
+
+    if (b.final_states.empty()) {
+        result.set_vertex(a.get_entries_count()+1);
+        result.transitions=a.transitions;
+        for (i=0 ; i<a.final_states.size() ; i++) {
+            final = a.final_states.at(i);
+            result.set_transition(final, a.get_entries_count()+1, '^');
+        }
+        result.symbol=a.symbol;
+        return result;
+    }
+
+
+
     result.set_vertex(a.get_entries_count() + b.get_entries_count() +2);
 
-    int i;
     trans new_trans;
 
     result.set_transition(0, 1, '^');
@@ -691,7 +721,6 @@ NFA Union(DFA a, DFA b) {
         //cout << "nn " << new_trans.vertex_from+1 << " " << new_trans.vertex_to+1 << endl;
     }
 
-    int final;
     for (i=0 ; i<a.final_states.size() ; i++) {
         final = a.final_states.at(i);
         result.set_transition(final +1, a.get_entries_count() + b.get_entries_count()+1, '^');
@@ -713,6 +742,7 @@ NFA Union(DFA a, DFA b) {
 
 
     result.set_final_state(a.get_entries_count() + b.get_entries_count() +1);
+    result.symbol=a.symbol;
 
     return result;
 }
