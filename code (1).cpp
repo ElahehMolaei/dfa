@@ -163,6 +163,37 @@ class NFA {
 
 };
 
+/*NFA Union(NFA a, NFA b) {
+    NFA result;
+    result.set_vertex(a.get_vertex_count() + b.get_vertex_count()+2);
+
+    int i;
+    trans new_trans;
+
+    result.set_transition(0, 1, '^');
+    result.set_transition(0, a.get_vertex_count()+1, '^');
+    for(i = 0; i < a.transitions.size(); i++) {
+        new_trans = a.transitions.at(i);
+        result.set_transition(new_trans.vertex_from+1, new_trans.vertex_to+1, new_trans.trans_symbol);
+        cout << "nn " << new_trans.vertex_from+1 << " " << new_trans.vertex_to+1 << endl;
+    }
+
+    result.set_transition(a.get_final_state(), a.get_vertex_count() + b.get_vertex_count()+1, '^');
+
+    for(i = 0; i < b.transitions.size(); i++) {
+        new_trans = b.transitions.at(i);
+        result.set_transition(new_trans.vertex_from + a.get_vertex_count()+1, new_trans.vertex_to + a.get_vertex_count()+1, new_trans.trans_symbol);
+        cout << "nnnnn " << new_trans.vertex_from + a.get_vertex_count()+1 << " " << new_trans.vertex_to + a.get_vertex_count()+1 << endl;
+    }
+
+    result.set_transition(b.get_final_state(), a.get_vertex_count() + b.get_vertex_count()+1, '^');
+
+
+    result.set_final_state(a.get_vertex_count() + b.get_vertex_count() +1);
+
+    return result;
+}*/
+
 NFA concat(NFA a, NFA b) {
     NFA result;
     result.set_vertex(a.get_vertex_count() + b.get_vertex_count());
@@ -322,6 +353,8 @@ NFA re_to_nfa(string re) {
 
     NFA nfa=operands.top();
     nfa.symbol=sym;
+    //for (int i=0 ; i<sym.size() ; i++)
+       // cout << "i " << sym.at(i) << endl;
 
     return nfa;
 }
@@ -384,6 +417,23 @@ class DFA {
             return -1;
         }
 
+        /*void set_symbol(string reg) {
+            int i, j, let;
+            for (i=0 ; i<reg.length() ; i++) {
+                let=1;
+                if (reg[i]!='(' && reg[i]!=')' && reg[i]!='*' && reg[i]!='+' && reg[i]!='.') {
+                    for (j=0 ; j<i ; j++) {
+                        if (reg[i]==reg[j]) {
+                            let=0;
+                        }
+                    }
+                    if (let) {
+                        symbol.push_back(reg[i]);
+                    }
+                }
+            }
+        }*/
+
         void set_final_state(int nfa_fs) {
             if (nfa_fs) {
                 for (int i = 0; i < entries.size(); i++) {
@@ -410,6 +460,42 @@ class DFA {
             new_trans.trans_symbol = trans_symbol;
             transitions.push_back(new_trans);
         }
+
+        void delete_trantransitions() {
+            trans tran1=transitions.at(transitions.size()-1), tran2;
+            int i, j;
+            /*int arr[tran1.vertex_from];
+
+            for (i=0 ; i<tran1.vertex_from ; i++) {
+                arr[i]=0;
+            }
+            for (i=0 ; i<transitions.size() ; i++) {
+                tran2 = transitions.at(i);
+                arr[tran2.vertex_from]=1;
+                cout << "x "<< tran1.vertex_from << " " <<tran2.vertex_from<< endl;
+            }
+            /*for (i=0 ; i<transitions.size() ; i++) {
+                if(arr[i]==0) {
+                    entries.erase(entries.begin()+ i-1);
+                }
+
+            }*/
+
+            for (i=0 ; i<transitions.size()-1 ; i++) {
+                tran1=transitions.at(i);
+                /*if (arr[tran1.vertex_from]==0) {
+                    transitions.erase(transitions.begin() + i );
+                    continue;
+                }*/
+                for (j=i+1 ; j<transitions.size() ; j++) {
+                    tran2=transitions.at(j);
+                    if (tran1.vertex_from==tran2.vertex_from && tran1.vertex_to==tran2.vertex_to && tran1.trans_symbol==tran2.trans_symbol) {
+                        transitions.erase(transitions.begin() + j );
+                    }
+                }
+            }
+        }
+
 
         void display() {
             trans new_trans;
@@ -525,6 +611,14 @@ DFA nfa_to_dfa(NFA nfa) {
         vertex_from = dfa.next_unmarked_entry_idx();
     }
 
+    dfa.delete_trantransitions();
+/*    if (dfa.transitions.size()== symbols.size()) {
+
+
+        for (int i=0 ; i<dfa.transitions.size() ; i++) {
+        }
+
+    }*/
     // The finish states of the DFA are those which contain any
     // of the finish states of the NFA.
     dfa.set_final_state(nfa.get_final_state());
@@ -536,32 +630,48 @@ NFA contrary (DFA a) {
     int i;
     NFA result;
 
-    bool arr[a.get_entries_count()];
-    for (i=0 ; i<a.get_entries_count() ; i++) {
-        arr[i]=0;
-    }
 
-    int final;
-    for (i=0 ; i<a.final_states.size() ; i++) {
-        final=a.final_states.at(i);
-        arr[final]=1;
-    }
-
-    result.set_vertex(a.get_entries_count()+1);
-    trans new_trans;
-
-    for(i = 0; i < a.transitions.size(); i++) {
-        new_trans = a.transitions.at(i);
-        result.set_transition(new_trans.vertex_from, new_trans.vertex_to, new_trans.trans_symbol);
-    }
-
-    for (i=0 ; i<a.get_entries_count() ; i++) {
-        if (!arr[i]) {
-            result.set_transition(i, a.get_entries_count() + 1, '^');
-            //cout << "i " << i << endl;
+    cout << "xx" << a.get_entries_count() << " " << a.final_states.size() <<endl;
+    if (a.get_entries_count()!=a.final_states.size()) {
+        bool arr[a.get_entries_count()];
+        for (i=0 ; i<a.get_entries_count() ; i++) {
+            arr[i]=0;
         }
+
+        int final;
+        for (i=0 ; i<a.final_states.size() ; i++) {
+            final=a.final_states.at(i);
+            arr[final]=1;
+        }
+
+        result.set_vertex(a.get_entries_count()+1);
+        trans new_trans;
+
+        for(i = 0; i < a.transitions.size(); i++) {
+            new_trans = a.transitions.at(i);
+            result.set_transition(new_trans.vertex_from, new_trans.vertex_to, new_trans.trans_symbol);
+        }
+
+        for (i=0 ; i<a.get_entries_count() ; i++) {
+            if (!arr[i]) {
+                result.set_transition(i, a.get_entries_count() + 1, '^');
+                //cout << "i " << i << endl;
+            }
+        }
+        result.set_final_state(a.get_entries_count()+1);
+
+    } else {
+
+        result.set_vertex(a.get_entries_count());
+        trans new_trans;
+
+        for(i = 0; i < a.transitions.size(); i++) {
+            new_trans = a.transitions.at(i);
+            result.set_transition(new_trans.vertex_from, new_trans.vertex_to, new_trans.trans_symbol);
+        }
+
+        result.set_final_state(-1);
     }
-    result.set_final_state(a.get_entries_count()+1);
 
     return result;
 }
@@ -815,6 +925,11 @@ int main() {
     //dfa2= minimize(dfa2);
     //dfa2.display_m();
 
+    cout<<"-------------------------------------------------------------------------------------------------";
+    cout << "\n1" <<endl;
+    contrary(dfa1).display();
+    cout << "\n\n2" <<endl;
+    contrary(dfa2).display();
     /*cout<<"-------------------------------------------------------------------------------------------------";
     cout<<endl<<"NFA3 :"<<endl;
     NFA nfa3=Union(dfa1, nfa_to_dfa(contrary(dfa2)));
