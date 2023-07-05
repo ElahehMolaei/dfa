@@ -728,11 +728,12 @@ NFA Union(DFA a, DFA b) {
     int i;
 
     if (a.final_states.empty()) {
+        cout << "aaa" << endl;
         result.set_vertex(b.get_entries_count()+1);
         result.transitions=b.transitions;
         for (i=0 ; i<b.final_states.size() ; i++) {
             final = b.final_states.at(i);
-            result.set_transition(final, b.get_entries_count()+1, '^');
+            result.set_transition(final, b.get_entries_count(), '^');
         }
         result.set_final_state(b.get_entries_count());
         result.symbol=b.symbol;
@@ -740,11 +741,12 @@ NFA Union(DFA a, DFA b) {
     }
 
     if (b.final_states.empty()) {
+            cout << "bbb" << endl;
         result.set_vertex(a.get_entries_count()+1);
         result.transitions=a.transitions;
         for (i=0 ; i<a.final_states.size() ; i++) {
             final = a.final_states.at(i);
-            result.set_transition(final, a.get_entries_count()+1, '^');
+            result.set_transition(final, a.get_entries_count(), '^');
         }
         result.set_final_state(a.get_entries_count());
         result.symbol=a.symbol;
@@ -1053,5 +1055,7 @@ b*+(((b+(a.b))*.a).b*)
 
 
 
-(a+b)*.(a+b)*
+(a+b)*.(a).(a).(a+b)*
+(a+b)*.(a).(b).(a+b)*
+(a+b)*.(b).(a).(a+b)*
 */
