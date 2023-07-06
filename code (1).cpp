@@ -10,7 +10,7 @@
 #include <string.h>
 #define DEBUG 1
 
-using namespace std;
+using namespace std;//final ver
 
 string join(vector<int> v, string delim) {
     stringstream ss;
