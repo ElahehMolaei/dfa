@@ -912,45 +912,54 @@ DFA minimize(DFA& dfa) {
 
 
 
-int size_order(string reg) {
+/*int size_order(string reg) {
     int i, j, Size= reg.length();
 
     for (i=1 ; i<reg.length()-1 ; i++) {
+        //cout << reg[i] << reg[i+1] << endl;
         if (i<reg.length()-2 && (reg[i+1]>= 'a' && reg[i+1]<= 'z') || (reg[i+1]>= 'A' && reg[i+1]<= 'Z') || (reg[i+1]>= '0' && reg[i+1]<= '9')) {
             if ((reg[i]>= 'a' && reg[i]<= 'z') || (reg[i]>= 'A' && reg[i]<= 'Z') || (reg[i]>= '0' && reg[i]<= '9') || reg[i]== '*' || reg[i]== ')') {
                 Size++;
+                cout << "S " << reg[i] << endl;
             }
+        } else if (i<reg.length()-2 && reg[i+1]== '(' && (reg[i]== '*' || reg[i]== ')') ) {
+            Size++;
+            cout <<"s " << reg[i] <<endl;
         }
-
     }
 
     return Size;
-}
+}*/
 
-string order(string reg, int Size) {
+string order(string reg) {
+
     int i, j;
-    char regex[Size];
+    string regex= "";
+
+    //cout << "reg" << Size << regex <<endl;
     for (i=0 , j=0; i<reg.length() ; i++, j++) {
 
-        regex[j]=reg[i];
+        regex+=reg[i];
+        //cout << "o0 " << regex[j] << i << j << endl;
 
         if (i<reg.length()-2 && (reg[i+1]>= 'a' && reg[i+1]<= 'z') || (reg[i+1]>= 'A' && reg[i+1]<= 'Z') || (reg[i+1]>= '0' && reg[i+1]<= '9')) {
             if ((reg[i]>= 'a' && reg[i]<= 'z') || (reg[i]>= 'A' && reg[i]<= 'Z') || (reg[i]>= '0' && reg[i]<= '9') || reg[i]== '*' || reg[i]== ')') {
                 j++;
-                regex[j]='.';
+                regex+='.';
+                //cout << "o1 " << regex[j] << i << j << endl;
             }
-        } else if (i<reg.length()-2 && reg[i+1]>= '(' && (reg[i]== '*' || reg[i]== ')')) {
+        } else if (i<reg.length()-2 && reg[i+1]== '(' && (reg[i]== '*' || reg[i]== ')') ) {
             j++;
-            regex[j]='.';
+            regex+='.';
+            //cout << "o2 " << regex[j] << i << j << endl;
         }
     }
 
+
+    //cout << "reg" << regex.length() << regex<< endl;
+
     return regex;
 }
-
-
-
-
 
 int main() {
 
@@ -975,6 +984,10 @@ int main() {
 		cout<<endl<<"enter the regex: ";
 		cin>>reg2;
 		reg2= "(" + reg2 + ")";
+
+    //cout << order(reg1) << endl;
+    //cout << order(reg2) << endl;
+
 
     NFA nfa1;
     DFA dfa1;
@@ -1001,7 +1014,7 @@ int main() {
     //dfa2= minimize(dfa2);
     //dfa2.display_m();
 
-    cout<<"-------------------------------------------------------------------------------------------------";
+    /*cout<<"-------------------------------------------------------------------------------------------------";
     cout << "\n1" <<endl;
     contrary(dfa1).display();
     cout << "\n\n2" <<endl;
@@ -1020,7 +1033,7 @@ int main() {
     nfa4.display();
     cout<<endl<<"DFA4 :"<<endl;
     DFA dfa4=nfa_to_dfa(nfa4);
-    dfa4.display();
+    dfa4.display();*/
 
     /*NFA nfa3=Union(dfa1, dfa2);
     nfa3.display();
@@ -1030,11 +1043,11 @@ int main() {
 
 
 
-	if (is_true(dfa3) && is_true(dfa4)) {
+	/*if (is_true(dfa3) && is_true(dfa4)) {
         cout << "\n\nThe two Regular expression are equal." << endl;
     } else {
         cout << "\n\nThe two Regular expressions are not equal." << endl;
-    }
+    }*/
     return 0;
 }
 
@@ -1044,7 +1057,8 @@ int main() {
 
 /*
 (a+b)*
-(a*.b*)*
+(a*b*)*
+(a+b)*
 */
 
 /*
@@ -1055,7 +1069,7 @@ b*+(((b+(a.b))*.a).b*)
 
 
 
-(a+b)*.(a).(a).(a+b)*
-(a+b)*.(a).(b).(a+b)*
-(a+b)*.(b).(a).(a+b)*
+(a+b).(a).(a).(a+b)
+(a+b).(a).(b).(a+b)
+(a+b)*(b)(a)(a+b)*
 */
