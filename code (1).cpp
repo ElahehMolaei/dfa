@@ -493,8 +493,11 @@ class DFA {
                 for (j=i+1 ; j<transitions.size() ; j++) {
                     tran2=transitions.at(j);
                     if (tran1.vertex_from==tran2.vertex_from && tran1.vertex_to==tran2.vertex_to && tran1.trans_symbol==tran2.trans_symbol) {
+                        cout << "vvv " << tran1.vertex_from << " " << tran1.vertex_to << " " << tran1.trans_symbol << " " << i << j <<endl;
                         transitions.erase(transitions.begin() + j );
+                        j--;
                     }
+                    //cout << "j " << j <<endl;
                 }
             }
         }
@@ -948,7 +951,7 @@ string order(string reg) {
                 regex+='.';
                 //cout << "o1 " << regex[j] << i << j << endl;
             }
-        } else if (i<reg.length()-2 && reg[i+1]== '(' && (reg[i]== '*' || reg[i]== ')') ) {
+        } else if (i<reg.length()-2 && reg[i+1]== '(' && (reg[i]== '*' || reg[i]== ')' || (reg[i]>= 'a' && reg[i]<= 'z') || (reg[i]>= 'A' && reg[i]<= 'Z') || (reg[i]>= '0' && reg[i]<= '9')) ) {
             j++;
             regex+='.';
             //cout << "o2 " << regex[j] << i << j << endl;
@@ -993,9 +996,11 @@ int main() {
     DFA dfa1;
     NFA nfa2;
     DFA dfa2;
+    cout << order(reg1) << endl;
+    cout << order(reg2) << endl;
     cout<<"-------------------------------------------------------------------------------------------------";
 	cout<<endl<<"NFA1 :"<<endl;
-    nfa1 = re_to_nfa(reg1);
+    nfa1 = re_to_nfa(order(reg1));
     nfa1.display();
     cout<<"\n==> DFA1 : \n";
     dfa1 = nfa_to_dfa(nfa1);
@@ -1005,16 +1010,16 @@ int main() {
     //dfa1.display_m();
 	cout<<"-------------------------------------------------------------------------------------------------";
     cout<<endl<<"NFA2 :"<<endl;
-    nfa2 = re_to_nfa(reg2);
+    nfa2 = re_to_nfa(order(reg2));
     nfa2.display();
     cout<<"\n==> DFA2 : \n";
     dfa2 = nfa_to_dfa(nfa2);
     dfa2.display();
-    //cout<<"\n==> minimize DFA2 : \n";
-    //dfa2= minimize(dfa2);
-    //dfa2.display_m();
+    /*cout<<"\n==> minimize DFA2 : \n";
+    dfa2= minimize(dfa2);
+    dfa2.display_m();*/
 
-    /*cout<<"-------------------------------------------------------------------------------------------------";
+    cout<<"-------------------------------------------------------------------------------------------------";
     cout << "\n1" <<endl;
     contrary(dfa1).display();
     cout << "\n\n2" <<endl;
@@ -1033,21 +1038,15 @@ int main() {
     nfa4.display();
     cout<<endl<<"DFA4 :"<<endl;
     DFA dfa4=nfa_to_dfa(nfa4);
-    dfa4.display();*/
-
-    /*NFA nfa3=Union(dfa1, dfa2);
-    nfa3.display();
-    cout<<"\n==> DFA3 : \n";
-    DFA dfa = nfa_to_dfa(nfa3);
-    dfa.display_m();*/
+    dfa4.display();
 
 
 
-	/*if (is_true(dfa3) && is_true(dfa4)) {
+	if (is_true(dfa3) && is_true(dfa4)) {
         cout << "\n\nThe two Regular expression are equal." << endl;
     } else {
         cout << "\n\nThe two Regular expressions are not equal." << endl;
-    }*/
+    }
     return 0;
 }
 
@@ -1062,10 +1061,12 @@ int main() {
 */
 
 /*
-b*.(a.b.b*)*.(a+^)
-(b+(a.b))*.(a+^)
-b*+(((b+(a.b))*.a).b*)
+b*(abb*)*(a+^)
+(b+(ab))*(a+^)
+b*+((b+(ab))*ab*)
 
+(a+b)*.a.a.(a+b)*
+(a+b)*.a.(a+b)*
 
 
 
